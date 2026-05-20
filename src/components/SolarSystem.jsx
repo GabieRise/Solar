@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { PLANETS } from '../data/planets';
+import InfoPanel from './InfoPanel';
 import { buildTextures } from '../utils/textures';
 import { addStarField, addAsteroidBelt, addComet, buildPlanetMesh } from '../utils/sceneHelpers';
 
@@ -212,18 +213,7 @@ export default function SolarSystem() {
         drag · scroll · click
       </div>
 
-      {selected && (
-        <div onClick={() => setSelected(null)} style={{
-          position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(4,6,24,0.92)', border: '0.5px solid rgba(255,255,255,0.13)',
-          borderRadius: 12, padding: '13px 22px', minWidth: 230, maxWidth: 340,
-          textAlign: 'center', cursor: 'pointer'
-        }}>
-          <p style={{ margin: '0 0 5px', fontSize: 17, fontWeight: 500, color: '#fff' }}>{selected.name}</p>
-          <p style={{ margin: 0, fontSize: 12.5, color: 'rgba(255,255,255,0.6)', lineHeight: 1.55 }}>{selected.facts}</p>
-          <p style={{ margin: '8px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>click to dismiss</p>
-        </div>
-      )}
+      <InfoPanel planet={selected} onDismiss={() => setSelected(null)} />
     </div>
   );
 }
