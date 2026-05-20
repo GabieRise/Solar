@@ -26,7 +26,9 @@ export function addAsteroidBelt(scene) {
     verts.push(Math.cos(a) * r, (Math.random() - 0.5) * 2, Math.sin(a) * r);
   }
   geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 0.7 })));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    color: 0xaaaaaa, size: 0.55, sizeAttenuation: true, transparent: true, opacity: 0.7,
+  })));
 }
 
 export function addComet(scene) {
@@ -45,7 +47,10 @@ export function addComet(scene) {
   for (let i = 0; i < 80; i++) tailVerts.push(-i * 0.45 - 0.8, i * 0.02, 0);
   const tailGeo = new THREE.BufferGeometry();
   tailGeo.setAttribute('position', new THREE.Float32BufferAttribute(tailVerts, 3));
-  head.add(new THREE.Line(tailGeo, new THREE.LineBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.35 })));
+  head.add(new THREE.Line(
+    tailGeo,
+    new THREE.LineBasicMaterial({ color: 0x99ccff, transparent: true, opacity: 0.35 })
+  ));
 
   return pivot;
 }

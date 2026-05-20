@@ -8,18 +8,18 @@ function load(path) {
 
 export function buildTextures() {
   return {
-    sun:          load('sun.jpg'),
-    mercury:      load('mercury.jpg'),
-    venus:        load('venus.jpg'),
-    earth:        load('earth_day.jpg'),
-    earthNight:   load('earth_night.jpg'),
-    earthClouds:  load('earth_clouds.jpg'),
-    mars:         load('mars.jpg'),
-    jupiter:      load('jupiter.jpg'),
-    saturn:       load('saturn.jpg'),
-    saturnRing:   load('saturn_ring.png'),
-    uranus:       load('uranus.jpg'),
-    neptune:      load('neptune.jpg'),
-    moon:         load('moon.jpg'),
+    sun:         load('sun.jpg'),
+    mercury:     load('mercury.jpg'),
+    venus:       load('venus.jpg'),
+    earth:       load('earth_day.jpg'),
+    earthNight:  load('earth_night.jpg'),
+    earthClouds: load('earth_clouds.jpg'),
+    mars:        load('mars.jpg'),
+    jupiter:     load('jupiter.jpg'),
+    saturn:      load('saturn.jpg'),
+    saturnRing:  load('saturn_ring.png'),
+    uranus:      load('uranus.jpg'),
+    neptune:     load('neptune.jpg'),
+    moon:        load('moon.jpg'),
   };
 }
