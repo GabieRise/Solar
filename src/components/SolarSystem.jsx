@@ -7,18 +7,18 @@ import { createTrail } from '../utils/orbitTrail';
 import InfoPanel from './InfoPanel';
 
 export default function SolarSystem() {
-  const canvasRef      = useRef(null);
-  const rootRef        = useRef(null);
-  const labelsRef      = useRef([]);
-  const trailsRef      = useRef([]);
-  const showLabelsRef  = useRef(true);
-  const showTrailsRef  = useRef(true);
-  const speedRef       = useRef(1);
+  const canvasRef     = useRef(null);
+  const rootRef       = useRef(null);
+  const labelsRef     = useRef([]);
+  const trailsRef     = useRef([]);
+  const showLabelsRef = useRef(true);
+  const showTrailsRef = useRef(true);
+  const speedRef      = useRef(1);
 
-  const [selected,    setSelected]    = useState(null);
-  const [speed,       setSpeed]       = useState(1);
-  const [showLabels,  setShowLabels]  = useState(true);
-  const [showTrails,  setShowTrails]  = useState(true);
+  const [selected,   setSelected]   = useState(null);
+  const [speed,      setSpeed]      = useState(1);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showTrails, setShowTrails] = useState(true);
 
   const handleSpeed = useCallback(e => {
     speedRef.current = parseFloat(e.target.value);
@@ -90,6 +90,9 @@ export default function SolarSystem() {
       new THREE.MeshBasicMaterial({ color: 0xff7700, transparent: true, opacity: 0.06, side: THREE.BackSide })
     ));
 
+    // ── Sun position (always at origin) ───────────────────────────────────────
+    const sunPosition = new THREE.Vector3(0, 0, 0);
+
     // ── Planets ───────────────────────────────────────────────────────────────
     const planetGroups = [];
     const labelDivs    = [];
@@ -113,7 +116,7 @@ export default function SolarSystem() {
       pivot.userData.angle = Math.random() * Math.PI * 2;
       scene.add(pivot);
 
-      const mesh = buildPlanetMesh(p, textures);
+      const mesh = buildPlanetMesh(p, textures, sunPosition);
       pivot.add(mesh);
       planetGroups.push({ pivot, mesh, p });
 
@@ -219,6 +222,16 @@ export default function SolarSystem() {
           if (child.userData.isClouds) child.rotation.y += dt * 0.04;
         });
 
+        // Update Earth day/night shader with Sun direction
+        if (mesh.userData.isEarth) {
+          const earthWorldPos = new THREE.Vector3();
+          mesh.getWorldPosition(earthWorldPos);
+          const dir = new THREE.Vector3()
+            .subVectors(sunPosition, earthWorldPos)
+            .normalize();
+          mesh.material.uniforms.sunDirection.value.copy(dir);
+        }
+
         // Trail
         const worldPos = new THREE.Vector3();
         mesh.getWorldPosition(worldPos);
@@ -226,9 +239,9 @@ export default function SolarSystem() {
       });
 
       // Sun & comet
-      sunMesh.rotation.y          += dt * 0.08;
-      cometPivot.userData.angle   += 0.004 * spd * dt * 60;
-      cometPivot.rotation.y        = cometPivot.userData.angle;
+      sunMesh.rotation.y        += dt * 0.08;
+      cometPivot.userData.angle += 0.004 * spd * dt * 60;
+      cometPivot.rotation.y      = cometPivot.userData.angle;
 
       // Camera
       camera.position.x = camDist * Math.cos(polar) * Math.sin(azimuth);
