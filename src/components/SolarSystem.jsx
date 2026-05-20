@@ -141,6 +141,10 @@ export default function SolarSystem() {
         pivot.userData.angle += p.speed * spd * dt * 0.22;
         pivot.rotation.y = pivot.userData.angle;
         mesh.rotation.y += dt * 0.3;
+        // new change: rotate planet clouds if they exist and orbiting moons
+        mesh.children.forEach(child => {
+        if (child.userData.isClouds) child.rotation.y += dt * 0.04;
+        });
         if (mesh.userData.moonPivot) {
           mesh.userData.moonPivot.userData.angle += dt * spd * 1.8;
           mesh.userData.moonPivot.rotation.y = mesh.userData.moonPivot.userData.angle;
