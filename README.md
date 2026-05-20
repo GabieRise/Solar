@@ -1,70 +1,148 @@
-# Getting Started with Create React App
+# 🌍 Interactive Solar System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A 3D interactive solar system built with **React** and **Three.js**. Explore all 8 planets in real time — click any planet to learn about it, drag to rotate the view, scroll to zoom, and adjust orbit speed with a slider.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## Demo features
 
-### `npm start`
+- 3D orbiting planets with accurate relative sizes and colors
+- Saturn's rings rendered in 3D
+- Starfield background with 1,800+ stars
+- Click any planet (or the Sun) to see its name and a fun fact
+- Drag to rotate the camera freely
+- Scroll to zoom in and out
+- Speed slider to slow down or speed up all orbits
+- Point light emanating from the Sun for realistic planet shading
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Tech stack
 
-### `npm test`
+| Technology | Purpose |
+|---|---|
+| React 18 | UI and component lifecycle |
+| Three.js r128 | 3D rendering via WebGL |
+| Create React App | Project scaffolding and dev server |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## Getting started
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Prerequisites
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- [Node.js](https://nodejs.org) v18 or higher
+- npm (comes with Node.js)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Installation
 
-### `npm run eject`
+```bash
+# Clone the repository
+git clone https://github.com/your-username/solar-system.git
+cd solar-system
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# Install dependencies
+npm install
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+# Start the development server
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The app will open at `http://localhost:3000`.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Project structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+src/
+├── components/
+│   └── SolarSystem.jsx     # Three.js scene, camera, render loop, interactivity
+├── data/
+│   └── planets.js          # Planet data — name, size, color, orbit speed, facts
+├── App.js                  # Root component
+└── index.js                # React entry point
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## How it works
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Three.js setup (`SolarSystem.jsx`)
 
-### Analyzing the Bundle Size
+The Three.js scene is initialized inside a `useEffect` hook, which runs once after the component mounts. A `useRef` holds a reference to the `<canvas>` DOM element without triggering re-renders.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```jsx
+const canvasRef = useRef(null);
 
-### Making a Progressive Web App
+useEffect(() => {
+  const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current });
+  // ... scene setup
+  return () => renderer.dispose(); // cleanup on unmount
+}, []);
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Orbital motion
 
-### Advanced Configuration
+Each planet sits inside an `Object3D` pivot. Rotating the pivot each frame moves the planet along its orbit — no manual trigonometry needed.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```js
+pivot.userData.angle += planet.speed * dt;
+pivot.rotation.y = pivot.userData.angle;
+```
 
-### Deployment
+### Click detection
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+A `Raycaster` converts the mouse click position into a 3D ray, which is tested against all planet meshes to find intersections.
 
-### `npm run build` fails to minify
+```js
+raycaster.setFromCamera(mouse, camera);
+const hits = raycaster.intersectObjects(planetMeshes);
+if (hits.length > 0) setSelected(hits[0].object.userData.planet);
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+## Planet data
+
+Planets are defined in `src/data/planets.js` as an array of objects:
+
+```js
+{ name: 'Earth', radius: 1.9, dist: 40, color: 0x4a9eff, speed: 2.9, facts: '...' }
+```
+
+| Field | Description |
+|---|---|
+| `name` | Display name |
+| `radius` | Sphere size (not to real scale) |
+| `dist` | Distance from the Sun in scene units |
+| `color` | Hex color for the material |
+| `speed` | Orbit speed multiplier |
+| `facts` | Fun fact shown on click |
+| `rings` | `true` to add a ring (Saturn only) |
+
+---
+
+## Available scripts
+
+| Command | Description |
+|---|---|
+| `npm start` | Run the development server at localhost:3000 |
+| `npm run build` | Build for production into the `build/` folder |
+| `npm test` | Run the test suite |
+
+---
+
+## Possible extensions
+
+- Add texture maps to planets using `THREE.TextureLoader`
+- Add a Moon orbiting Earth
+- Add a comet with a particle trail using `THREE.Points`
+- Integrate `OrbitControls` from Three.js examples for smoother camera movement
+- Add tooltips on hover using a `Raycaster` on `mousemove`
+
+---
+
+## License
+
+MIT
