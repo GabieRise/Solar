@@ -4,6 +4,7 @@ import { PLANETS } from '../data/planets';
 import { buildTextures } from '../utils/textures';
 import { addStarField, addAsteroidBelt, addComet, buildPlanetMesh } from '../utils/sceneHelpers';
 import { createTrail } from '../utils/orbitTrail';
+import { addMoons } from '../utils/moonBuilder';
 import InfoPanel from './InfoPanel';
 
 export default function SolarSystem() {

@@ -129,20 +129,6 @@ export function buildPlanetMesh(p, textures, sunPosition) {
     ring.rotation.x = Math.PI / 2.5;
     mesh.add(ring);
   }
-
-  // ── Moon ──────────────────────────────────────────────────────────────────
-  if (p.moon) {
-    const moonPivot = new THREE.Object3D();
-    moonPivot.userData.angle = Math.random() * Math.PI * 2;
-    const moonMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.5, 32, 32),
-      new THREE.MeshStandardMaterial({ map: textures.moon, roughness: 0.9 })
-    );
-    moonMesh.position.set(p.radius * 2.8, 0, 0);
-    moonPivot.add(moonMesh);
-    mesh.add(moonPivot);
-    mesh.userData.moonPivot = moonPivot;
-  }
-
+  
   return mesh;
 }
