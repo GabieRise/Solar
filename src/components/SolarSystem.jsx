@@ -98,6 +98,8 @@ export default function SolarSystem() {
     const planetGroups = [];
     const labelDivs    = [];
 
+    const allMeshes = [sunMesh];
+
     PLANETS.forEach(p => {
       // Orbit ring
       const orbitPts = Array.from({ length: 129 }, (_, i) =>
@@ -119,6 +121,7 @@ export default function SolarSystem() {
 
       const mesh = buildPlanetMesh(p, textures, sunPosition);
       pivot.add(mesh);
+      addMoons(mesh, p.name, textures, allMeshes);
       planetGroups.push({ pivot, mesh, p });
 
       // Floating label
@@ -143,7 +146,7 @@ export default function SolarSystem() {
     trailsRef.current = planetGroups.map(() => createTrail(scene));
 
     // ── Interaction ───────────────────────────────────────────────────────────
-    const allMeshes = [sunMesh, ...planetGroups.map(g => g.mesh)];
+    // const allMeshes = [sunMesh, ...planetGroups.map(g => g.mesh)];
     const raycaster  = new THREE.Raycaster();
     const mouse      = new THREE.Vector2();
 
