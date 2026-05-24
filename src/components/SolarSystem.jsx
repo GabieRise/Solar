@@ -5,7 +5,9 @@ import { buildTextures } from '../utils/textures';
 import { addStarField, addAsteroidBelt, addComet, buildPlanetMesh } from '../utils/sceneHelpers';
 import { createTrail } from '../utils/orbitTrail';
 import { addMoons } from '../utils/moonBuilder';
+import { fetchAllPlanetPositions, fetchAsteroids } from '../services/nasaService';
 import InfoPanel from './InfoPanel';
+import AsteroidPanel from './AsteroidPanel';
 
 export default function SolarSystem() {
   const canvasRef     = useRef(null);
@@ -16,10 +18,12 @@ export default function SolarSystem() {
   const showTrailsRef = useRef(true);
   const speedRef      = useRef(1);
 
-  const [selected,   setSelected]   = useState(null);
-  const [speed,      setSpeed]      = useState(1);
-  const [showLabels, setShowLabels] = useState(true);
-  const [showTrails, setShowTrails] = useState(true);
+  const [selected,       setSelected]       = useState(null);
+  const [speed,          setSpeed]          = useState(1);
+  const [showLabels,     setShowLabels]     = useState(true);
+  const [showTrails,     setShowTrails]     = useState(true);
+  const [showAsteroids,  setShowAsteroids]  = useState(false);
+  const [nasaStatus,     setNasaStatus]     = useState('idle'); // idle | loading | loaded | error
 
   const handleSpeed = useCallback(e => {
     speedRef.current = parseFloat(e.target.value);
@@ -84,21 +88,17 @@ export default function SolarSystem() {
       },
     };
     scene.add(sunMesh);
-
-    // Sun glow
     scene.add(new THREE.Mesh(
       new THREE.SphereGeometry(10, 32, 32),
       new THREE.MeshBasicMaterial({ color: 0xff7700, transparent: true, opacity: 0.06, side: THREE.BackSide })
     ));
 
-    // ── Sun position (always at origin) ───────────────────────────────────────
     const sunPosition = new THREE.Vector3(0, 0, 0);
 
     // ── Planets ───────────────────────────────────────────────────────────────
     const planetGroups = [];
     const labelDivs    = [];
-
-    const allMeshes = [sunMesh];
+    const allMeshes    = [sunMesh];
 
     PLANETS.forEach(p => {
       // Orbit ring
@@ -121,7 +121,10 @@ export default function SolarSystem() {
 
       const mesh = buildPlanetMesh(p, textures, sunPosition);
       pivot.add(mesh);
+
+      // Moons
       addMoons(mesh, p.name, textures, allMeshes);
+      allMeshes.push(mesh);
       planetGroups.push({ pivot, mesh, p });
 
       // Floating label
@@ -145,11 +148,34 @@ export default function SolarSystem() {
     // ── Trails ────────────────────────────────────────────────────────────────
     trailsRef.current = planetGroups.map(() => createTrail(scene));
 
+    // ── NASA real positions ───────────────────────────────────────────────────
+    setNasaStatus('loading');
+    fetchAllPlanetPositions().then(positions => {
+      if (Object.keys(positions).length === 0) {
+        setNasaStatus('error');
+        return;
+      }
+      planetGroups.forEach(({ pivot, mesh, p }) => {
+        const pos = positions[p.name];
+        if (!pos) return;
+
+        // Compute angle from real XZ position and set pivot
+        const angle = Math.atan2(pos.z, pos.x);
+        pivot.userData.angle = angle;
+        pivot.rotation.y     = angle;
+
+        // Clear trail history so it starts fresh from real position
+        const trailIdx = planetGroups.indexOf(planetGroups.find(g => g.mesh === mesh));
+        if (trailsRef.current[trailIdx]) {
+          trailsRef.current[trailIdx].history?.splice(0);
+        }
+      });
+      setNasaStatus('loaded');
+    }).catch(() => setNasaStatus('error'));
+
     // ── Interaction ───────────────────────────────────────────────────────────
-    // const allMeshes = [sunMesh, ...planetGroups.map(g => g.mesh)];
     const raycaster  = new THREE.Raycaster();
     const mouse      = new THREE.Vector2();
-
     let isDrag = false, lastX = 0, lastY = 0;
     let azimuth = 0, polar = 0.42, camDist = 168;
 
@@ -208,46 +234,37 @@ export default function SolarSystem() {
       const spd = speedRef.current;
 
       planetGroups.forEach(({ pivot, mesh, p }, i) => {
-        // Orbital motion
         pivot.userData.angle += p.speed * spd * dt * 0.22;
         pivot.rotation.y      = pivot.userData.angle;
+        mesh.rotation.y      += dt * 0.3;
 
-        // Self rotation
-        mesh.rotation.y += dt * 0.3;
-
-        // Moon
-        if (mesh.userData.moonPivot) {
-          mesh.userData.moonPivot.userData.angle += dt * spd * 1.8;
-          mesh.userData.moonPivot.rotation.y      = mesh.userData.moonPivot.userData.angle;
+        if (mesh.userData.moonPivots) {
+          mesh.userData.moonPivots.forEach(mp => {
+            mp.userData.angle += mp.userData.speed * spd * dt * 0.22;
+            mp.rotation.y      = mp.userData.angle;
+          });
         }
 
-        // Cloud drift
         mesh.children.forEach(child => {
           if (child.userData.isClouds) child.rotation.y += dt * 0.04;
         });
 
-        // Update Earth day/night shader with Sun direction
         if (mesh.userData.isEarth) {
-          const earthWorldPos = new THREE.Vector3();
-          mesh.getWorldPosition(earthWorldPos);
-          const dir = new THREE.Vector3()
-            .subVectors(sunPosition, earthWorldPos)
-            .normalize();
+          const earthPos = new THREE.Vector3();
+          mesh.getWorldPosition(earthPos);
+          const dir = new THREE.Vector3().subVectors(sunPosition, earthPos).normalize();
           mesh.material.uniforms.sunDirection.value.copy(dir);
         }
 
-        // Trail
         const worldPos = new THREE.Vector3();
         mesh.getWorldPosition(worldPos);
         trailsRef.current[i].update(worldPos);
       });
 
-      // Sun & comet
       sunMesh.rotation.y        += dt * 0.08;
       cometPivot.userData.angle += 0.004 * spd * dt * 60;
       cometPivot.rotation.y      = cometPivot.userData.angle;
 
-      // Camera
       camera.position.x = camDist * Math.cos(polar) * Math.sin(azimuth);
       camera.position.y = camDist * Math.sin(polar);
       camera.position.z = camDist * Math.cos(polar) * Math.cos(azimuth);
@@ -255,7 +272,6 @@ export default function SolarSystem() {
 
       updateLabels(showLabelsRef.current);
 
-      // Resize check
       if (Math.abs(W() - renderer.domElement.width) > 2) {
         renderer.setSize(W(), H());
         camera.aspect = W() / H();
@@ -280,6 +296,15 @@ export default function SolarSystem() {
       renderer.dispose();
     };
   }, []);
+
+  // NASA status badge colors
+  const statusStyles = {
+    idle:    { color: 'rgba(255,255,255,0.25)', label: '' },
+    loading: { color: '#f5a623',                label: '⟳ Fetching NASA positions…' },
+    loaded:  { color: '#44cc88',                label: '✓ Real positions loaded' },
+    error:   { color: '#ff6666',                label: '⚠ Using approximate positions' },
+  };
+  const status = statusStyles[nasaStatus];
 
   return (
     <div
@@ -309,7 +334,43 @@ export default function SolarSystem() {
           Trails
           <input type="checkbox" defaultChecked onChange={onToggleTrails} style={{ accentColor: '#f5a623', cursor: 'pointer' }} />
         </label>
+
+        {/* Asteroids toggle */}
+        <button
+          onClick={() => setShowAsteroids(v => !v)}
+          style={{
+            marginTop:    4,
+            background:   showAsteroids ? 'rgba(68,170,255,0.15)' : 'rgba(255,255,255,0.05)',
+            border:       `0.5px solid ${showAsteroids ? 'rgba(68,170,255,0.4)' : 'rgba(255,255,255,0.15)'}`,
+            borderRadius: 6,
+            color:        showAsteroids ? '#44aaff' : 'rgba(255,255,255,0.45)',
+            fontSize:     12,
+            padding:      '5px 10px',
+            cursor:       'pointer',
+          }}
+        >
+          {showAsteroids ? '✕ Close Asteroids' : '☄ Live Asteroids'}
+        </button>
       </div>
+
+      {/* NASA status badge */}
+      {nasaStatus !== 'idle' && (
+        <div style={{
+          position:   'absolute',
+          bottom:     nasaStatus === 'loaded' ? 70 : 20,
+          left:       '50%',
+          transform:  'translateX(-50%)',
+          fontSize:   11,
+          color:      status.color,
+          background: 'rgba(0,0,0,0.5)',
+          padding:    '4px 12px',
+          borderRadius: 20,
+          pointerEvents: 'none',
+          transition: 'opacity 0.5s',
+        }}>
+          {status.label}
+        </div>
+      )}
 
       {/* Hint */}
       <div style={{ position: 'absolute', top: 14, right: 16, fontSize: 11, color: 'rgba(255,255,255,0.22)', textAlign: 'right', lineHeight: 2 }}>
@@ -318,6 +379,9 @@ export default function SolarSystem() {
 
       {/* Planet info */}
       <InfoPanel planet={selected} onDismiss={() => setSelected(null)} />
+
+      {/* Asteroid panel */}
+      {showAsteroids && <AsteroidPanel onClose={() => setShowAsteroids(false)} />}
     </div>
   );
 }
