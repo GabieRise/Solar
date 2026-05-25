@@ -83,7 +83,7 @@ export default function SolarSystem() {
     );
     sunMesh.userData = {
       planet: {
-        name:  'The Sun',
+        name:  'The SUN',
         facts: "Contains 99.86% of the solar system's mass. Core temperature reaches 15 million °C.",
       },
     };
