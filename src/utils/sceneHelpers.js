@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { earthVertexShader, earthFragmentShader } from '../shaders/earthShader';
+import { getOrbitPath } from './keplerSolver';
 
 export function addStarField(scene) {
-  const geo = new THREE.BufferGeometry();
+  const geo   = new THREE.BufferGeometry();
   const verts = [];
   for (let i = 0; i < 2400; i++) {
     const theta = Math.random() * Math.PI * 2;
@@ -19,7 +20,7 @@ export function addStarField(scene) {
 }
 
 export function addAsteroidBelt(scene) {
-  const geo = new THREE.BufferGeometry();
+  const geo   = new THREE.BufferGeometry();
   const verts = [];
   for (let i = 0; i < 900; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -56,11 +57,23 @@ export function addComet(scene) {
   return pivot;
 }
 
+// ── Elliptical orbit ring using real Keplerian path ───────────────────────────
+export function addOrbitRing(scene, planetName) {
+  const pts    = getOrbitPath(planetName, 180);
+  const points = pts.map(p => new THREE.Vector3(p.x, p.y, p.z));
+  const line   = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(points),
+    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07 })
+  );
+  scene.add(line);
+  return line;
+}
+
+// ── Planet mesh builder ───────────────────────────────────────────────────────
 export function buildPlanetMesh(p, textures, sunPosition) {
   let mesh;
 
   if (p.name === 'Earth') {
-    // ── Custom shader for day/night cycle ──────────────────────────────────
     const earthMat = new THREE.ShaderMaterial({
       uniforms: {
         dayTexture:   { value: textures.earth },
@@ -70,7 +83,6 @@ export function buildPlanetMesh(p, textures, sunPosition) {
       vertexShader:   earthVertexShader,
       fragmentShader: earthFragmentShader,
     });
-
     mesh = new THREE.Mesh(new THREE.SphereGeometry(p.radius, 64, 64), earthMat);
     mesh.userData.isEarth = true;
 
@@ -78,29 +90,23 @@ export function buildPlanetMesh(p, textures, sunPosition) {
     const clouds = new THREE.Mesh(
       new THREE.SphereGeometry(p.radius * 1.02, 64, 64),
       new THREE.MeshStandardMaterial({
-        map:         textures.earthClouds,
-        transparent: true,
-        opacity:     0.4,
-        depthWrite:  false,
+        map: textures.earthClouds, transparent: true, opacity: 0.4, depthWrite: false,
       })
     );
     clouds.userData.isClouds = true;
     mesh.add(clouds);
 
-    // Atmosphere glow
+    // Atmosphere
     mesh.add(new THREE.Mesh(
       new THREE.SphereGeometry(p.radius * 1.08, 32, 32),
       new THREE.MeshBasicMaterial({ color: 0x4499ff, transparent: true, opacity: 0.09, side: THREE.BackSide })
     ));
 
   } else {
-    // ── All other planets ──────────────────────────────────────────────────
     mesh = new THREE.Mesh(
       new THREE.SphereGeometry(p.radius, 64, 64),
       new THREE.MeshStandardMaterial({ map: textures[p.tex], roughness: 0.75, metalness: 0.05 })
     );
-
-    // Atmosphere glow
     if (p.atm) {
       mesh.add(new THREE.Mesh(
         new THREE.SphereGeometry(p.radius * 1.08, 32, 32),
@@ -109,11 +115,9 @@ export function buildPlanetMesh(p, textures, sunPosition) {
     }
   }
 
-  mesh.rotation.z  = p.tilt || 0;
-  mesh.position.set(p.dist, 0, 0);
   mesh.userData.planet = p;
 
-  // ── Saturn rings ──────────────────────────────────────────────────────────
+  // Saturn rings
   if (p.rings) {
     const rGeo = new THREE.RingGeometry(p.radius * 1.4, p.radius * 2.5, 80);
     const pos  = rGeo.attributes.position;
@@ -129,6 +133,6 @@ export function buildPlanetMesh(p, textures, sunPosition) {
     ring.rotation.x = Math.PI / 2.5;
     mesh.add(ring);
   }
-  
+
   return mesh;
 }
